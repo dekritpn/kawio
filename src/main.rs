@@ -1,20 +1,24 @@
-mod game;
-mod state;
-mod network;
-mod storage;
 mod ai;
+mod game;
+mod network;
+mod state;
+mod storage;
 
+use std::env;
 use std::sync::{Arc, Mutex};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tracing_subscriber::fmt::init();
 
+    let port = env::var("PORT").unwrap_or_else(|_| "8080".to_string());
+    let address = format!("0.0.0.0:{}", port);
+
     let sessions = Arc::new(Mutex::new(state::Sessions::new()));
     let app = network::create_router(sessions);
 
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:8080").await?;
-    tracing::info!("Server running on http://0.0.0.0:8080");
+    let listener = tokio::net::TcpListener::bind(&address).await?;
+    tracing::info!("Server running on http://{}", address);
     axum::serve(listener, app).await?;
     Ok(())
 }

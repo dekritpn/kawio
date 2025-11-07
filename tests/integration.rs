@@ -1,6 +1,6 @@
+use kawio::game::Game;
 use kawio::state::Sessions;
 use kawio::storage::Storage;
-use kawio::game::Game;
 
 #[test]
 fn test_sessions_create_game() {

@@ -1,17 +1,20 @@
-use std::collections::HashMap;
 use crate::game::{Game, Player};
 use crate::storage::Storage;
+use std::collections::HashMap;
+use std::env;
 
 pub struct Sessions {
     games: HashMap<String, Game>,
     players: HashMap<String, (String, String)>,
     next_id: u64,
-    storage: Storage,
+    pub storage: Storage,
+    queue: Vec<String>,
 }
 
 impl Sessions {
     pub fn new() -> Self {
-        let storage = Storage::new("kawio.db").expect("Failed to open database");
+        let db_path = env::var("DB_PATH").unwrap_or_else(|_| "kawio.db".to_string());
+        let storage = Storage::new(&db_path).expect("Failed to open database");
         let (games, players) = storage.load_all_games().expect("Failed to load games");
         let next_id = games.len() as u64 + 1;
         Sessions {
@@ -19,6 +22,17 @@ impl Sessions {
             players,
             next_id,
             storage,
+            queue: Vec::new(),
+        }
+    }
+
+    pub fn join_matchmaking(&mut self, player: String) -> Option<String> {
+        if self.queue.is_empty() {
+            self.queue.push(player);
+            None
+        } else {
+            let opponent = self.queue.remove(0);
+            Some(self.create_game(player, opponent))
         }
     }
 
@@ -27,8 +41,11 @@ impl Sessions {
         self.next_id += 1;
         let game = Game::new();
         self.games.insert(id.clone(), game.clone());
-        self.players.insert(id.clone(), (player1.clone(), player2.clone()));
-        self.storage.save_game(&id, &game, &player1, &player2).expect("Failed to save game");
+        self.players
+            .insert(id.clone(), (player1.clone(), player2.clone()));
+        self.storage
+            .save_game(&id, &game, &player1, &player2)
+            .expect("Failed to save game");
         id
     }
 
@@ -56,7 +73,17 @@ impl Sessions {
             }
             if game.is_valid_move(pos) {
                 game.make_move(pos);
-                self.storage.save_game(id, game, p1, p2).expect("Failed to save game");
+                if game.is_game_over() {
+                    if let Some(winner) = game.winner() {
+                        let player_won = winner == Player::Black;
+                        self.storage
+                            .update_player(p1, p2, player_won)
+                            .expect("Failed to update player");
+                    }
+                }
+                self.storage
+                    .save_game(id, game, p1, p2)
+                    .expect("Failed to save game");
                 Ok(())
             } else {
                 Err("Invalid move".to_string())
@@ -69,8 +96,18 @@ impl Sessions {
     pub fn pass(&mut self, id: &str) -> Result<(), String> {
         if let Some(game) = self.games.get_mut(id) {
             game.pass();
-            let (p1, p2) = self.players.get(id).unwrap();
-            self.storage.save_game(id, game, p1, p2).expect("Failed to save game");
+            if game.is_game_over() {
+                let (p1, p2) = self.players.get(id).unwrap();
+                if let Some(winner) = game.winner() {
+                    let player_won = winner == Player::Black;
+                    self.storage
+                        .update_player(p1, p2, player_won)
+                        .expect("Failed to update player");
+                }
+                self.storage
+                    .save_game(id, game, p1, p2)
+                    .expect("Failed to save game");
+            }
             Ok(())
         } else {
             Err("Game not found".to_string())
