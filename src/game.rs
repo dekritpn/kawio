@@ -151,9 +151,20 @@ impl Game {
         moves
     }
 
+    /// Checks if the given player has any legal moves.
+    pub fn has_legal_move(&self, player: Player) -> bool {
+        let temp_game = Game {
+            black: self.black,
+            white: self.white,
+            current_player: player,
+            passes: self.passes,
+        };
+        !temp_game.legal_moves().is_empty()
+    }
+
     /// Checks if the game is over (two consecutive passes).
     pub fn is_game_over(&self) -> bool {
-        self.passes == 2
+        !self.has_legal_move(Player::Black) && !self.has_legal_move(Player::White)
     }
 
     /// Returns the winner of the game, or None if it's a tie or the game is not over.
