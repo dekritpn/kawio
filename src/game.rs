@@ -27,9 +27,9 @@ pub struct Game {
 impl Game {
     /// Creates a new Othello game with the standard initial position.
     pub fn new() -> Self {
-        // Initial position: Black at D4 (3,3) and E5 (4,4), White at E4 (4,3) and D5 (3,4)
-        let black = (1u64 << 27) | (1u64 << 36); // D4=27, E5=36
-        let white = (1u64 << 28) | (1u64 << 35); // E4=28, D5=35
+        // Initial position: Black at E4 and D5, White at D4 and E5
+        let black = (1u64 << 28) | (1u64 << 35); // E4=28, D5=35
+        let white = (1u64 << 27) | (1u64 << 36); // D4=27, E5=36
         Game {
             black,
             white,
@@ -237,8 +237,8 @@ mod tests {
     fn test_initial_moves() {
         let game = Game::new();
         let moves = game.legal_moves();
-        assert!(moves.contains(&Game::coord_to_pos("E3").unwrap()));
-        assert!(moves.contains(&Game::coord_to_pos("F4").unwrap()));
+        assert!(moves.contains(&Game::coord_to_pos("D3").unwrap()));
+        assert!(moves.contains(&Game::coord_to_pos("C4").unwrap()));
     }
 
     #[test]
