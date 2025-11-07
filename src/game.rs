@@ -58,11 +58,6 @@ impl Game {
         !self.occupied() & ALL
     }
 
-    /// Returns a bitboard of all empty squares.
-    pub fn empty(&self) -> u64 {
-        !self.occupied() & ALL
-    }
-
     /// Checks if a move at the given position is valid for the current player.
     pub fn is_valid_move(&self, pos: u8) -> bool {
         if pos >= 64 || (self.occupied() & (1u64 << pos)) != 0 {
@@ -193,17 +188,6 @@ impl Game {
         (self.black.count_ones(), self.white.count_ones())
     }
 
-    /// Returns a vector of all legal move positions for the current player.
-    pub fn legal_moves(&self) -> Vec<u8> {
-        let mut moves = Vec::new();
-        for pos in 0..64 {
-            if self.is_valid_move(pos) {
-                moves.push(pos);
-            }
-        }
-        moves
-    }
-
     /// Checks if the given player has any legal moves.
     pub fn has_legal_move(&self, player: Player) -> bool {
         let temp_game = Game {
@@ -213,32 +197,6 @@ impl Game {
             passes: self.passes,
         };
         !temp_game.legal_moves().is_empty()
-    }
-
-    /// Checks if the game is over (two consecutive passes).
-    pub fn is_game_over(&self) -> bool {
-        !self.has_legal_move(Player::Black) && !self.has_legal_move(Player::White)
-    }
-
-    /// Returns the winner of the game, or None if it's a tie or the game is not over.
-    pub fn winner(&self) -> Option<Player> {
-        if !self.is_game_over() {
-            return None;
-        }
-        let black_count = self.black.count_ones();
-        let white_count = self.white.count_ones();
-        if black_count > white_count {
-            Some(Player::Black)
-        } else if white_count > black_count {
-            Some(Player::White)
-        } else {
-            None // Tie
-        }
-    }
-
-    /// Returns the count of black and white discs as (black, white).
-    pub fn disc_count(&self) -> (u32, u32) {
-        (self.black.count_ones(), self.white.count_ones())
     }
 
     /// Converts a position (0-63) to a coordinate string, e.g., 56 -> "A1" (bottom-left).
