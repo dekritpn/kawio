@@ -18,11 +18,13 @@ impl Player {
 
 #[derive(Clone)]
 pub struct Game {
-    pub black: u64, // Bitboard for black discs
-    pub white: u64, // Bitboard for white discs
+    pub black: u64,  // Bitboard for black discs
+    pub white: u64,  // Bitboard for white discs
     pub current_player: Player,
-    pub passes: u8, // Number of consecutive passes
+    pub passes: u8,  // Number of consecutive passes
 }
+
+const ALL: u64 = 0xFFFF_FFFF_FFFF_FFFF;
 
 impl Game {
     /// Creates a new Othello game with the standard initial position.
@@ -45,7 +47,7 @@ impl Game {
 
     /// Returns a bitboard of all empty squares.
     pub fn empty(&self) -> u64 {
-        !self.occupied()
+        !self.occupied() & ALL
     }
 
     /// Checks if a move at the given position is valid for the current player.
