@@ -80,4 +80,17 @@ impl Sessions {
     pub fn list_games(&self) -> Vec<String> {
         self.games.keys().cloned().collect()
     }
+
+    // Test helpers
+    pub fn game_count(&self) -> usize {
+        self.games.len()
+    }
+
+    pub fn has_game(&self, id: &str) -> bool {
+        self.games.contains_key(id)
+    }
+
+    pub fn has_player(&self, id: &str) -> bool {
+        self.players.contains_key(id)
+    }
 }

@@ -41,6 +41,9 @@ impl Storage {
         let mut rows = stmt.query_map([id], |row| {
             let black: i64 = row.get(0)?;
             let white: i64 = row.get(1)?;
+            if black < 0 || white < 0 {
+                return Err(rusqlite::Error::QueryReturnedNoRows);
+            }
             let current_player: String = row.get(2)?;
             let passes: u8 = row.get(3)?;
             let player1: String = row.get(4)?;
@@ -62,6 +65,9 @@ impl Storage {
             let id: String = row.get(0)?;
             let black: i64 = row.get(1)?;
             let white: i64 = row.get(2)?;
+            if black < 0 || white < 0 {
+                return Err(rusqlite::Error::QueryReturnedNoRows);
+            }
             let current_player: String = row.get(3)?;
             let passes: u8 = row.get(4)?;
             let player1: String = row.get(5)?;
