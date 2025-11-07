@@ -14,7 +14,7 @@ fn test_sessions_create_game() {
 fn test_sessions_make_move() {
     let mut sessions = Sessions::new();
     let id = sessions.create_game("Alice".to_string(), "Bob".to_string());
-    let pos = Game::coord_to_pos("E3").unwrap();
+    let pos = Game::coord_to_pos("D3").unwrap();
     assert!(sessions.make_move(&id, pos, "Alice").is_ok());
     let game = sessions.get_game(&id).unwrap();
     assert_eq!(game.current_player, kawio::game::Player::White);

@@ -109,9 +109,19 @@ impl Game {
     }
 
     /// Places a disc at the given position and flips the appropriate opponent discs.
-    pub fn make_move(&mut self, pos: u8) {
-        let pos_bit = 1u64 << pos;
+    /// Returns an error if the move is invalid.
+    pub fn make_move(&mut self, pos: u8) -> Result<(), String> {
+        if pos >= 64 {
+            return Err("Position out of bounds".to_string());
+        }
+        if (self.occupied() & (1u64 << pos)) != 0 {
+            return Err("Square is already occupied".to_string());
+        }
         let flips = self.flips(pos);
+        if flips == 0 {
+            return Err("Move does not flip any discs".to_string());
+        }
+        let pos_bit = 1u64 << pos;
         if self.current_player == Player::Black {
             self.black |= pos_bit | flips;
             self.white &= !flips;
@@ -121,6 +131,7 @@ impl Game {
         }
         self.current_player = self.current_player.opponent();
         self.passes = 0;
+        Ok(())
     }
 
     /// Passes the turn to the opponent and increments the pass counter.
@@ -244,9 +255,9 @@ mod tests {
     #[test]
     fn test_make_move() {
         let mut game = Game::new();
-        let pos = Game::coord_to_pos("E3").unwrap();
+        let pos = Game::coord_to_pos("D3").unwrap();
         assert!(game.is_valid_move(pos));
-        game.make_move(pos);
+        game.make_move(pos).unwrap();
         assert_eq!(game.current_player, Player::White);
         assert_eq!(game.black.count_ones(), 4); // placed + flipped 1
         assert_eq!(game.white.count_ones(), 1); // flipped 1

@@ -18,7 +18,7 @@ impl AI {
         let mut best_value = i32::MIN;
         for &mv in &moves {
             let mut new_game = game.clone();
-            new_game.make_move(mv);
+            let _ = new_game.make_move(mv);
             let value = -Self::alphabeta(&new_game, depth - 1, i32::MIN, i32::MAX);
             if value > best_value {
                 best_value = value;
@@ -40,7 +40,7 @@ impl AI {
         }
         for &mv in &moves {
             let mut new_game = game.clone();
-            new_game.make_move(mv);
+            let _ = new_game.make_move(mv);
             let value = -Self::alphabeta(&new_game, depth - 1, -beta, -alpha);
             if value >= beta {
                 return beta;

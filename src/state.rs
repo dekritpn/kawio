@@ -72,7 +72,7 @@ impl Sessions {
                 return Err("Not your turn".to_string());
             }
             if game.is_valid_move(pos) {
-                game.make_move(pos);
+                game.make_move(pos)?;
                 if game.is_game_over() {
                     if let Some(winner) = game.winner() {
                         let player_won = winner == Player::Black;
