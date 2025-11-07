@@ -1,6 +1,6 @@
 # Kawio: An Othello Game Server
 
-Kawio is a modern Othello (Reversi) game server written in Rust, designed for performance, reliability, and extensibility. It provides complete game logic, session handling, and optional database integration for persistent multiplayer play.
+Kawio is a modern Othello game server written in Rust, designed for performance, reliability, and extensibility. It provides complete game logic, session handling, and optional database integration for persistent multiplayer play.
 
 ## 🕹️ About Othello
 
@@ -108,12 +108,12 @@ This project is licensed under the MIT License — see the LICENSE file for deta
 
 ## 🔧 A Functional Game Server
 
-To make Kawio a complete, usable game server, these essential features 
+To make Kawio a complete, usable game server, these are essential features we are trying to achieve
 
 1. Networking Layer — REST or WebSocket endpoints to handle moves, matchmaking, and game state queries.
 2. Authentication/Session Tokens — To identify players and ensure fair play.
 3. Matchmaking System — To pair players automatically or manage game invitations.
 4. Persistence Layer — For storing player data, results, and leaderboards.
 5. Logging and Error Handling — Structured logs (e.g., via tracing crate).
-Testing and Benchmarking — For core rules and performance-critical paths.
-6. AI Interface — Optional bot integration for single-player or training.
+6. Testing and Benchmarking — For core rules and performance-critical paths.
+7. AI Interface — Optional bot integration for single-player or training.
