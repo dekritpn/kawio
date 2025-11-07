@@ -1,5 +1,11 @@
+//! Game logic for Othello (Reversi).
+//!
+//! The board is represented as a 64-bit bitboard, with bit 0 = A8 (top-left), bit 63 = H1 (bottom-right).
+//! Coordinates use standard Othello notation: A1 = bottom-left (56), H8 = top-right (7).
+
 use std::fmt;
 
+/// Represents a player in the Othello game.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Player {
     Black,
@@ -16,6 +22,7 @@ impl Player {
     }
 }
 
+/// Represents the state of an Othello game.
 #[derive(Clone)]
 pub struct Game {
     pub black: u64,  // Bitboard for black discs
@@ -41,8 +48,14 @@ impl Game {
     }
 
     /// Returns a bitboard of all occupied squares.
+    /// Returns the bitboard of all occupied squares.
     pub fn occupied(&self) -> u64 {
         self.black | self.white
+    }
+
+    /// Returns the bitboard of all empty squares.
+    pub fn empty(&self) -> u64 {
+        !self.occupied() & ALL
     }
 
     /// Returns a bitboard of all empty squares.
@@ -137,9 +150,47 @@ impl Game {
     }
 
     /// Passes the turn to the opponent and increments the pass counter.
+    /// Passes the turn to the opponent and increments the pass counter.
     pub fn pass(&mut self) {
         self.current_player = self.current_player.opponent();
         self.passes += 1;
+    }
+
+    /// Returns a list of all legal move positions for the current player.
+    pub fn legal_moves(&self) -> Vec<u8> {
+        let mut moves = Vec::new();
+        for pos in 0..64 {
+            if self.is_valid_move(pos) {
+                moves.push(pos);
+            }
+        }
+        moves
+    }
+
+    /// Checks if the game is over (neither player has legal moves).
+    pub fn is_game_over(&self) -> bool {
+        !self.has_legal_move(Player::Black) && !self.has_legal_move(Player::White)
+    }
+
+    /// Returns the winner of the game, or None if it's a tie or not over.
+    pub fn winner(&self) -> Option<Player> {
+        if !self.is_game_over() {
+            return None;
+        }
+        let black_count = self.black.count_ones();
+        let white_count = self.white.count_ones();
+        if black_count > white_count {
+            Some(Player::Black)
+        } else if white_count > black_count {
+            Some(Player::White)
+        } else {
+            None  // Tie
+        }
+    }
+
+    /// Returns the count of black and white discs as (black, white).
+    pub fn disc_count(&self) -> (u32, u32) {
+        (self.black.count_ones(), self.white.count_ones())
     }
 
     /// Returns a vector of all legal move positions for the current player.
