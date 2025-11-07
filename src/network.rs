@@ -35,6 +35,8 @@ struct GameStateResponse {
     legal_moves: Vec<String>,
     game_over: bool,
     winner: Option<String>,
+    player1: String,
+    player2: String,
 }
 
 pub fn create_router(sessions: Arc<Mutex<Sessions>>) -> Router {
@@ -47,10 +49,10 @@ pub fn create_router(sessions: Arc<Mutex<Sessions>>) -> Router {
 
 async fn create_match(
     State(sessions): State<Arc<Mutex<Sessions>>>,
-    Json(_req): Json<NewMatchRequest>,
+    Json(req): Json<NewMatchRequest>,
 ) -> Result<Json<NewMatchResponse>, StatusCode> {
     let mut sessions = sessions.lock().unwrap();
-    let id = sessions.create_game();
+    let id = sessions.create_game(req.player1.clone(), req.player2.clone());
     tracing::info!("Created game: {}", id);
     Ok(Json(NewMatchResponse { id }))
 }
@@ -62,7 +64,7 @@ async fn make_move(
 ) -> Result<(), StatusCode> {
     let pos = Game::coord_to_pos(&req.coord).ok_or(StatusCode::BAD_REQUEST)?;
     let mut sessions = sessions.lock().unwrap();
-    sessions.make_move(&id, pos).map_err(|_| StatusCode::BAD_REQUEST)?;
+    sessions.make_move(&id, pos, &req.player).map_err(|_| StatusCode::BAD_REQUEST)?;
     tracing::info!("Move made in game {}: {}", id, req.coord);
     Ok(())
 }
@@ -73,6 +75,7 @@ async fn get_state(
 ) -> Result<Json<GameStateResponse>, StatusCode> {
     let sessions = sessions.lock().unwrap();
     let game = sessions.get_game(&id).ok_or(StatusCode::NOT_FOUND)?;
+    let (player1, player2) = sessions.get_players(&id).ok_or(StatusCode::NOT_FOUND)?;
     let board = game_to_board(game);
     let legal_moves = game.legal_moves().iter().map(|&p| Game::pos_to_coord(p)).collect();
     let current_player = match game.current_player {
@@ -89,6 +92,8 @@ async fn get_state(
         legal_moves,
         game_over: game.is_game_over(),
         winner,
+        player1: player1.clone(),
+        player2: player2.clone(),
     }))
 }
 

@@ -1,4 +1,4 @@
-use crate::game::{Game, Player};
+use crate::game::Game;
 use rand::Rng;
 
 pub struct AI;

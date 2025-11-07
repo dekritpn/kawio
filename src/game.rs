@@ -115,7 +115,7 @@ impl Game {
     }
 
     pub fn is_game_over(&self) -> bool {
-        self.legal_moves().is_empty() && self.passes >= 1
+        self.passes == 2
     }
 
     pub fn winner(&self) -> Option<Player> {

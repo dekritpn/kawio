@@ -7,13 +7,14 @@ mod ai;
 use std::sync::{Arc, Mutex};
 
 #[tokio::main]
-async fn main() {
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tracing_subscriber::fmt::init();
 
     let sessions = Arc::new(Mutex::new(state::Sessions::new()));
     let app = network::create_router(sessions);
 
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:8080").await.unwrap();
+    let listener = tokio::net::TcpListener::bind("0.0.0.0:8080").await?;
     tracing::info!("Server running on http://0.0.0.0:8080");
-    axum::serve(listener, app).await.unwrap();
+    axum::serve(listener, app).await?;
+    Ok(())
 }
