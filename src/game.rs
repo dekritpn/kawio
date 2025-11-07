@@ -196,19 +196,24 @@ impl Game {
     }
 
     /// Converts a coordinate string to a position (0-63), e.g., "A1" -> 0.
-    pub fn coord_to_pos(coord: &str) -> Option<u8> {
+    /// Accepts lowercase and validates input.
+    pub fn coord_to_pos(coord: &str) -> Result<u8, String> {
         if coord.len() != 2 {
-            return None;
+            return Err("Coordinate must be exactly 2 characters".to_string());
         }
-        let bytes = coord.as_bytes();
-        let col = bytes[0] as u8;
-        let row = bytes[1] as u8;
-        if col < b'A' || col > b'H' || row < b'1' || row > b'8' {
-            return None;
+        let upper = coord.to_uppercase();
+        let bytes = upper.as_bytes();
+        let col = bytes[0];
+        let row = bytes[1];
+        if col < b'A' || col > b'H' {
+            return Err("Column must be A-H".to_string());
+        }
+        if row < b'1' || row > b'8' {
+            return Err("Row must be 1-8".to_string());
         }
         let c = col - b'A';
         let r = row - b'1';
-        Some(r * 8 + c)
+        Ok(r * 8 + c)
     }
 }
 
@@ -249,10 +254,13 @@ mod tests {
 
     #[test]
     fn test_coord_conversion() {
-        assert_eq!(Game::coord_to_pos("A1"), Some(0));
-        assert_eq!(Game::coord_to_pos("H8"), Some(63));
-        assert_eq!(Game::coord_to_pos("D3"), Some(19)); // D is 3, row 3-1=2, 2*8+3=19
-        assert_eq!(Game::coord_to_pos("I1"), None);
+        assert_eq!(Game::coord_to_pos("A1"), Ok(0));
+        assert_eq!(Game::coord_to_pos("H8"), Ok(63));
+        assert_eq!(Game::coord_to_pos("D3"), Ok(19)); // D is 3, row 3-1=2, 2*8+3=19
+        assert_eq!(Game::coord_to_pos("a1"), Ok(0)); // lowercase
+        assert!(Game::coord_to_pos("I1").is_err());
+        assert!(Game::coord_to_pos("A9").is_err());
+        assert!(Game::coord_to_pos("A").is_err());
     }
 
     #[test]

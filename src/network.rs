@@ -80,12 +80,12 @@ async fn make_move(
     Path(id): Path<String>,
     Json(req): Json<MoveRequest>,
 ) -> Result<(), StatusCode> {
-    let pos = Game::coord_to_pos(&req.coord).ok_or(StatusCode::BAD_REQUEST)?;
+    let pos = match Game::coord_to_pos(&req.coord) {
+        Ok(p) => p,
+        Err(_) => return Err(StatusCode::BAD_REQUEST),
+    };
     let mut sessions = sessions.lock().unwrap();
-    sessions
-        .make_move(&id, pos, &req.player)
-        .map_err(|_| StatusCode::BAD_REQUEST)?;
-    tracing::info!("Move made in game {}: {}", id, req.coord);
+    sessions.make_move(&id, pos, &req.player).map_err(|_| StatusCode::BAD_REQUEST)?;
     Ok(())
 }
 
