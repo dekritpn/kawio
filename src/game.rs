@@ -292,4 +292,28 @@ mod tests {
         assert!(game.black.count_ones() > 2); // more black discs
         assert!(game.white.count_ones() < 2); // fewer white discs
     }
+
+    #[test]
+    fn test_invalid_move() {
+        let mut game = Game::new();
+        // Try to place on occupied square
+        let occupied_pos = 27; // D4, occupied by white
+        assert!(game.make_move(occupied_pos).is_err());
+        // Try to place where no flips
+        let no_flip_pos = 0; // A8, empty but no flips
+        assert!(game.make_move(no_flip_pos).is_err());
+        // Out of bounds
+        assert!(game.make_move(64).is_err());
+    }
+
+    #[test]
+    fn test_game_over() {
+        let game = Game::new();
+        // Game is not over initially
+        assert!(!game.is_game_over());
+        // Game over when neither player has legal moves
+        // For a new game, both have moves
+        assert!(game.has_legal_move(Player::Black));
+        assert!(game.has_legal_move(Player::White));
+    }
 }
