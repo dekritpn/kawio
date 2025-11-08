@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kawio Othello</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="app">
+        <h1>Kawio Othello</h1>
+        <div id="login" class="section">
+            <h2>Login</h2>
+            <input type="text" id="playerName" placeholder="Enter player name">
+            <button id="loginBtn">Login</button>
+        </div>
+        <div id="menu" class="section hidden">
+            <h2>Menu</h2>
+            <button id="createMatchBtn">Create Match vs AI</button>
+            <button id="joinMatchmakingBtn">Join Matchmaking</button>
+            <button id="leaderboardBtn">View Leaderboard</button>
+        </div>
+        <div id="game" class="section hidden">
+            <h2>Game</h2>
+            <div id="board"></div>
+            <div id="status"></div>
+            <div id="legalMoves"></div>
+        </div>
+        <div id="leaderboard" class="section hidden">
+            <h2>Leaderboard</h2>
+            <div id="leaderboardContent"></div>
+            <button id="backToMenuBtn">Back to Menu</button>
+        </div>
+    </div>
+    <script src="app.js"></script>
+</body>
+</html>

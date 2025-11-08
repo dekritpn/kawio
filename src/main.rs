@@ -1,4 +1,5 @@
 mod ai;
+mod auth;
 mod game;
 mod network;
 mod state;
@@ -6,6 +7,7 @@ mod storage;
 
 use std::env;
 use std::sync::{Arc, Mutex};
+use tower_http::services::ServeDir;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -15,7 +17,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let address = format!("0.0.0.0:{}", port);
 
     let sessions = Arc::new(Mutex::new(state::Sessions::new()));
-    let app = network::create_router(sessions);
+    let api_router = network::create_router(sessions);
+    let app = api_router.nest_service("/", ServeDir::new("web"));
 
     let listener = tokio::net::TcpListener::bind(&address).await?;
     tracing::info!("Server running on http://{}", address);

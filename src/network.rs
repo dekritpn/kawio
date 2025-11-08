@@ -1,10 +1,13 @@
+use crate::ai::AI;
+use crate::auth::Auth;
 use crate::game::Game;
 use crate::state::Sessions;
 use crate::storage::PlayerStats;
 use axum::extract::ws::{WebSocket, WebSocketUpgrade};
 use axum::{
-    extract::{Path, State},
-    http::StatusCode,
+    async_trait,
+    extract::{FromRequestParts, Path, State},
+    http::{header, request::Parts, StatusCode},
     response::Json,
     routing::{get, post},
     Router,
@@ -15,9 +18,46 @@ use serde_json;
 use std::sync::{Arc, Mutex};
 use tracing;
 
+#[derive(Debug)]
+pub struct AuthenticatedPlayer(pub String);
+
+#[async_trait]
+impl<S> FromRequestParts<S> for AuthenticatedPlayer
+where
+    S: Send + Sync,
+{
+    type Rejection = StatusCode;
+
+    async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
+        let auth_header = parts
+            .headers
+            .get(header::AUTHORIZATION)
+            .and_then(|h| h.to_str().ok())
+            .and_then(|h| h.strip_prefix("Bearer "));
+
+        if let Some(token) = auth_header {
+            match Auth::validate_token(token) {
+                Ok(claims) => Ok(AuthenticatedPlayer(claims.sub)),
+                Err(_) => Err(StatusCode::UNAUTHORIZED),
+            }
+        } else {
+            Err(StatusCode::UNAUTHORIZED)
+        }
+    }
+}
+
+#[derive(Deserialize)]
+struct LoginRequest {
+    player: String,
+}
+
+#[derive(Serialize)]
+struct LoginResponse {
+    token: String,
+}
+
 #[derive(Deserialize)]
 struct NewMatchRequest {
-    player1: String,
     player2: String,
 }
 
@@ -29,7 +69,6 @@ struct NewMatchResponse {
 #[derive(Deserialize)]
 struct MoveRequest {
     coord: String,
-    player: String,
 }
 
 #[derive(Serialize)]
@@ -56,6 +95,7 @@ struct JoinResponse {
 
 pub fn create_router(sessions: Arc<Mutex<Sessions>>) -> Router {
     Router::new()
+        .route("/auth/login", post(login))
         .route("/match/new", post(create_match))
         .route("/match/join", post(join_matchmaking))
         .route("/match/:id/move", post(make_move))
@@ -65,19 +105,31 @@ pub fn create_router(sessions: Arc<Mutex<Sessions>>) -> Router {
         .with_state(sessions)
 }
 
+async fn login(Json(req): Json<LoginRequest>) -> Result<Json<LoginResponse>, StatusCode> {
+    match Auth::generate_token(&req.player) {
+        Ok(token) => Ok(Json(LoginResponse { token })),
+        Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
+    }
+}
+
 async fn create_match(
     State(sessions): State<Arc<Mutex<Sessions>>>,
+    AuthenticatedPlayer(player1): AuthenticatedPlayer,
     Json(req): Json<NewMatchRequest>,
 ) -> Result<Json<NewMatchResponse>, StatusCode> {
-    let mut sessions = sessions.lock().unwrap();
-    let id = sessions.create_game(req.player1.clone(), req.player2.clone());
-    tracing::info!("Created game: {}", id);
-    Ok(Json(NewMatchResponse { id }))
+    if (player1 == "AI" && req.player2 != "AI") || (player1 != "AI" && req.player2 == "AI") {
+        let mut sessions = sessions.lock().unwrap();
+        let id = sessions.create_game(player1.clone(), req.player2.clone());
+        tracing::info!("Created game: {}", id);
+        return Ok(Json(NewMatchResponse { id }));
+    }
+    Err(StatusCode::BAD_REQUEST)
 }
 
 async fn make_move(
     State(sessions): State<Arc<Mutex<Sessions>>>,
     Path(id): Path<String>,
+    AuthenticatedPlayer(player): AuthenticatedPlayer,
     Json(req): Json<MoveRequest>,
 ) -> Result<(), StatusCode> {
     let pos = match Game::coord_to_pos(&req.coord) {
@@ -85,7 +137,18 @@ async fn make_move(
         Err(_) => return Err(StatusCode::BAD_REQUEST),
     };
     let mut sessions = sessions.lock().unwrap();
-    sessions.make_move(&id, pos, &req.player).map_err(|_| StatusCode::BAD_REQUEST)?;
+    sessions.make_move(&id, pos, &player).map_err(|_| StatusCode::BAD_REQUEST)?;
+    let (p1, p2) = sessions.get_players(&id).unwrap();
+    let game = sessions.get_game(&id).unwrap();
+    let current_player_name = match game.current_player {
+        crate::game::Player::Black => p1,
+        crate::game::Player::White => p2,
+    };
+    if current_player_name == "AI" {
+        if let Some(ai_move) = AI::get_move(&game) {
+            sessions.make_move(&id, ai_move, "AI").map_err(|_| StatusCode::BAD_REQUEST)?;
+        }
+    }
     Ok(())
 }
 
@@ -123,10 +186,10 @@ async fn get_state(
 
 async fn join_matchmaking(
     State(sessions): State<Arc<Mutex<Sessions>>>,
-    Json(req): Json<JoinRequest>,
+    AuthenticatedPlayer(player): AuthenticatedPlayer,
 ) -> Result<Json<JoinResponse>, StatusCode> {
     let mut sessions = sessions.lock().unwrap();
-    if let Some(id) = sessions.join_matchmaking(req.player) {
+    if let Some(id) = sessions.join_matchmaking(player) {
         Ok(Json(JoinResponse {
             matched: true,
             id: Some(id),
