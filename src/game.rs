@@ -36,9 +36,9 @@ const ALL: u64 = 0xFFFF_FFFF_FFFF_FFFF;
 impl Game {
     /// Creates a new Othello game with the standard initial position.
     pub fn new() -> Self {
-        // Initial position: Black at E4 and D5, White at D4 and E5
-        let black = (1u64 << 28) | (1u64 << 35); // E4=28, D5=35
-        let white = (1u64 << 27) | (1u64 << 36); // D4=27, E5=36
+        // Initial position: Black at E4 (36) and D5 (27), White at D4 (35) and E5 (28)
+        let black = (1u64 << 36) | (1u64 << 27); // E4, D5
+        let white = (1u64 << 35) | (1u64 << 28); // D4, E5
         Game {
             black,
             white,
@@ -118,6 +118,22 @@ impl Game {
         flips
     }
 
+    /// Previews the flip mask for a potential move without mutating the game state.
+    /// Returns the bitboard of discs that would be flipped, or an error if the move is invalid.
+    pub fn preview_move(&self, pos: u8) -> Result<u64, String> {
+        if pos >= 64 {
+            return Err("Position out of bounds".to_string());
+        }
+        if (self.occupied() & (1u64 << pos)) != 0 {
+            return Err("Square is already occupied".to_string());
+        }
+        let flips = self.flips(pos);
+        if flips == 0 {
+            return Err("Move does not flip any discs".to_string());
+        }
+        Ok(flips)
+    }
+
     /// Places a disc at the given position and flips the appropriate opponent discs.
     /// Returns an error if the move is invalid.
     pub fn make_move(&mut self, pos: u8) -> Result<(), String> {
@@ -141,6 +157,14 @@ impl Game {
         }
         self.current_player = self.current_player.opponent();
         self.passes = 0;
+        // Auto-pass if current player has no legal moves
+        if !self.has_legal_move(self.current_player) {
+            self.pass();
+            // If still no moves after pass, pass again (game over after two passes)
+            if !self.has_legal_move(self.current_player) {
+                self.pass();
+            }
+        }
         Ok(())
     }
 
@@ -162,9 +186,9 @@ impl Game {
         moves
     }
 
-    /// Checks if the game is over (neither player has legal moves).
+    /// Checks if the game is over (two consecutive passes have occurred).
     pub fn is_game_over(&self) -> bool {
-        !self.has_legal_move(Player::Black) && !self.has_legal_move(Player::White)
+        self.passes == 2
     }
 
     /// Returns the winner of the game, or None if it's a tie or not over.
@@ -317,12 +341,26 @@ mod tests {
 
     #[test]
     fn test_game_over() {
-        let game = Game::new();
+        let mut game = Game::new();
         // Game is not over initially
         assert!(!game.is_game_over());
-        // Game over when neither player has legal moves
-        // For a new game, both have moves
-        assert!(game.has_legal_move(Player::Black));
-        assert!(game.has_legal_move(Player::White));
+        // Simulate two passes
+        game.pass();
+        assert!(!game.is_game_over());
+        game.pass();
+        assert!(game.is_game_over());
+    }
+
+    #[test]
+    fn test_preview_move() {
+        let game = Game::new();
+        // Test a valid move
+        let pos = game.legal_moves()[0];
+        let flips = game.preview_move(pos).unwrap();
+        assert!(flips > 0);
+        // Test invalid move
+        assert!(game.preview_move(64).is_err()); // out of bounds
+        assert!(game.preview_move(27).is_err()); // occupied
+        assert!(game.preview_move(0).is_err()); // no flips
     }
 }
