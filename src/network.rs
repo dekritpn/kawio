@@ -1,6 +1,6 @@
 use crate::ai::AI;
 use crate::auth::Auth;
-use crate::game::Game;
+use crate::game::{Game, Move};
 use crate::state::Sessions;
 use crate::storage::PlayerStats;
 use axum::extract::ws::{WebSocket, WebSocketUpgrade};
@@ -143,11 +143,17 @@ async fn make_move(
         crate::game::Player::White => p2,
     };
     if current_player_name == "AI" {
-        if let Some(ai_move) = AI::get_move(game) {
-            sessions.make_move(&id, ai_move, "AI").map_err(|_| StatusCode::BAD_REQUEST)?;
-        } else {
-            // AI has no moves, pass
-            sessions.pass(&id).map_err(|_| StatusCode::BAD_REQUEST)?;
+        match AI::get_move(game) {
+            Some(Move::Place(pos)) => {
+                sessions.make_move(&id, pos, "AI").map_err(|_| StatusCode::BAD_REQUEST)?;
+            }
+            Some(Move::Pass) => {
+                sessions.pass(&id).map_err(|_| StatusCode::BAD_REQUEST)?;
+            }
+            None => {
+                // Should not happen, but pass just in case
+                sessions.pass(&id).map_err(|_| StatusCode::BAD_REQUEST)?;
+            }
         }
     }
     Ok(())
@@ -254,10 +260,16 @@ async fn handle_socket(mut socket: WebSocket, sessions: Arc<Mutex<Sessions>>, id
                                 };
 
                                 if current_player_name == "AI" {
-                                    if let Some(ai_move) = AI::get_move(game) {
-                                        sessions_guard.make_move(&id, ai_move, "AI").unwrap();
-                                    } else {
-                                        sessions_guard.pass(&id).unwrap();
+                                    match AI::get_move(game) {
+                                        Some(Move::Place(pos)) => {
+                                            sessions_guard.make_move(&id, pos, "AI").unwrap();
+                                        }
+                                        Some(Move::Pass) => {
+                                            sessions_guard.pass(&id).unwrap();
+                                        }
+                                        None => {
+                                            sessions_guard.pass(&id).unwrap();
+                                        }
                                     }
                                 }
                             }
@@ -272,10 +284,16 @@ async fn handle_socket(mut socket: WebSocket, sessions: Arc<Mutex<Sessions>>, id
                             };
 
                             if current_player_name == "AI" {
-                                if let Some(ai_move) = AI::get_move(game) {
-                                    sessions_guard.make_move(&id, ai_move, "AI").unwrap();
-                                } else {
-                                    sessions_guard.pass(&id).unwrap();
+                                match AI::get_move(game) {
+                                    Some(Move::Place(pos)) => {
+                                        sessions_guard.make_move(&id, pos, "AI").unwrap();
+                                    }
+                                    Some(Move::Pass) => {
+                                        sessions_guard.pass(&id).unwrap();
+                                    }
+                                    None => {
+                                        sessions_guard.pass(&id).unwrap();
+                                    }
                                 }
                             }
                         }

@@ -14,6 +14,13 @@ pub enum Player {
     White,
 }
 
+/// Represents a move in the Othello game.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum Move {
+    Place(u8),
+    Pass,
+}
+
 impl Player {
     /// Returns the opponent of the current player.
     #[must_use]
@@ -26,7 +33,7 @@ impl Player {
 }
 
 /// Represents the state of an Othello game.
-#[derive(Clone, Default)]
+#[derive(Clone, Default, PartialEq)]
 pub struct Game {
     pub black: u64,  // Bitboard for black discs
     pub white: u64,  // Bitboard for white discs
@@ -144,6 +151,25 @@ impl Game {
     ///
     /// Returns an error if the move is invalid.
     pub fn make_move(&mut self, pos: u8) -> Result<(), String> {
+        self.make_move_enum(Move::Place(pos))
+    }
+
+    /// Makes a move, either placing a disc or passing.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the move is invalid.
+    pub fn make_move_enum(&mut self, mv: Move) -> Result<(), String> {
+        match mv {
+            Move::Place(pos) => self.make_move_internal(pos),
+            Move::Pass => {
+                self.pass();
+                Ok(())
+            }
+        }
+    }
+
+    fn make_move_internal(&mut self, pos: u8) -> Result<(), String> {
         if pos >= 64 {
             return Err("Position out of bounds".to_string());
         }
