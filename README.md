@@ -23,7 +23,7 @@ See the Wikipedia page on [Othello https://en.wikipedia.org/wiki/Reversi]
 
 * REST API — For turn submissions, match creation, and querying stats.
 
-* AI Opponent — Minimax algorithm with alpha-beta pruning for single-player mode.
+* AI Opponent — Monte Carlo Tree Search (MCTS) algorithm for single-player mode.
 
 * Authentication — JWT-based session tokens for secure play.
 
@@ -38,7 +38,7 @@ See the Wikipedia page on [Othello https://en.wikipedia.org/wiki/Reversi]
 The Kawio server is structured into several core modules:
 
 Module	Description
-ai/	AI opponent using minimax with alpha-beta pruning.
+ai/	AI opponent using Monte Carlo Tree Search (MCTS).
 auth/	JWT-based authentication for secure play.
 game/	Implements game rules and move logic.
 network/	REST API and WebSocket endpoints.
@@ -71,6 +71,7 @@ Configuration can be customized via environment variables (e.g., PORT=3000).
 
 1. Start the server as above.
 2. Open a web browser and navigate to http://localhost:8080.
+   - Note: If there's an issue accessing http://0.0.0.0:8080, try http://localhost:8080 instead.
 3. Enter a player name and click "Login" to receive a JWT token.
 4. Choose "Create Match vs AI" to play against the AI, or "Join Matchmaking" to wait for another player.
 5. Click on the board to make moves. The AI will respond automatically.
@@ -229,7 +230,6 @@ Run tests with: `cargo test`
 
 All core features implemented! Future enhancements may include:
 
- * Advanced AI algorithms (e.g., neural networks)
  * Tournament mode
  * Mobile app client
  * Multi-language support

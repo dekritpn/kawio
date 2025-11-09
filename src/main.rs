@@ -1,9 +1,4 @@
-mod ai;
-mod auth;
-mod game;
-mod network;
-mod state;
-mod storage;
+use kawio::*;
 
 use std::env;
 use std::sync::{Arc, Mutex};
