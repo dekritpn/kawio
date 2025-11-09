@@ -18,7 +18,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let sessions = Arc::new(Mutex::new(state::Sessions::new()));
     let api_router = network::create_router(sessions);
-    let app = api_router.nest_service("/", ServeDir::new("web"));
+    let app = api_router.fallback_service(ServeDir::new("web"));
 
     let listener = tokio::net::TcpListener::bind(&address).await?;
     tracing::info!("Server running on http://{}", address);

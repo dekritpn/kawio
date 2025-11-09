@@ -147,6 +147,9 @@ async fn make_move(
     if current_player_name == "AI" {
         if let Some(ai_move) = AI::get_move(&game) {
             sessions.make_move(&id, ai_move, "AI").map_err(|_| StatusCode::BAD_REQUEST)?;
+        } else {
+            // AI has no moves, pass
+            sessions.pass(&id).map_err(|_| StatusCode::BAD_REQUEST)?;
         }
     }
     Ok(())
