@@ -1,57 +1,201 @@
+:root {
+    --board-bg: #005A31;
+    --light-tile: #F0D9B5;
+    --dark-tile: #B58863;
+    --black-piece: #121212;
+    --white-piece: #F0F0F0;
+    --legal-move-hover: rgba(255, 255, 0, 0.5);
+    --text-light: #EAEAEA;
+    --text-dark: #333;
+    --primary-color: #4A735F;
+    --secondary-color: #8B4513;
+}
+
 body {
-    font-family: Arial, sans-serif;
-    max-width: 800px;
-    margin: 0 auto;
-    padding: 20px;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #2C2F33;
+    color: var(--text-light);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
 }
 
-.section {
-    margin-bottom: 20px;
+#game-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background-color: #23272A;
+    padding: 2rem;
+    border-radius: 10px;
+    box-shadow: 0 10px 20px rgba(0,0,0,0.2);
 }
 
-.hidden {
-    display: none;
+header h1 {
+    font-size: 2.5rem;
+    color: var(--primary-color);
+    margin-bottom: 1rem;
+    text-transform: uppercase;
+    letter-spacing: 3px;
 }
 
-#board {
+#game-board {
     display: grid;
     grid-template-columns: repeat(8, 50px);
     grid-template-rows: repeat(8, 50px);
     gap: 2px;
-    margin: 20px 0;
+    background-color: #111;
+    border: 5px solid var(--secondary-color);
+    padding: 5px;
+    border-radius: 5px;
 }
 
 .cell {
     width: 50px;
     height: 50px;
-    background-color: green;
+    background-color: var(--board-bg);
     display: flex;
-    align-items: center;
     justify-content: center;
+    align-items: center;
     cursor: pointer;
+    position: relative;
+}
+
+.piece {
+    width: 80%;
+    height: 80%;
     border-radius: 50%;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.4);
 }
 
-.cell.black {
-    background-color: black;
+.black {
+    background-color: var(--black-piece);
 }
 
-.cell.white {
-    background-color: white;
-    border: 1px solid black;
+.white {
+    background-color: var(--white-piece);
 }
 
-.cell.legal {
-    box-shadow: 0 0 10px yellow;
+.legal-move-indicator {
+    width: 50%;
+    height: 50%;
+    border-radius: 50%;
+    background-color: var(--legal-move-hover);
+    opacity: 0.7;
+}
+
+.cell:hover .legal-move-indicator {
+    background-color: rgba(255, 255, 0, 0.8);
+}
+
+#game-info {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    margin-top: 1rem;
+    padding: 0 1rem;
+}
+
+.player-info {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 0.5rem 1rem;
+    border-radius: 5px;
+    background-color: #2C2F33;
+}
+
+.player-info.active {
+    background-color: var(--primary-color);
+    color: var(--text-light);
+}
+
+.player-name {
+    font-weight: bold;
+    font-size: 1.2rem;
+}
+
+.score {
+    font-size: 1.5rem;
+    font-weight: bold;
+}
+
+#game-status {
+    margin-top: 1rem;
+    font-size: 1.1rem;
+    font-weight: bold;
+    color: var(--text-light);
+    text-align: center;
+}
+
+#game-controls {
+    margin-top: 1.5rem;
 }
 
 button {
-    margin: 5px;
-    padding: 10px;
+    background-color: var(--primary-color);
+    color: var(--text-light);
+    border: none;
+    padding: 0.8rem 1.5rem;
+    font-size: 1rem;
+    border-radius: 5px;
     cursor: pointer;
+    transition: background-color 0.3s ease;
+    margin: 0 0.5rem;
 }
 
-input {
-    padding: 10px;
-    margin: 5px;
+button:hover {
+    background-color: #5A836F;
+}
+
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 100;
+}
+
+.modal.hidden {
+    display: none;
+}
+
+.modal-content {
+    background-color: #2C2F33;
+    padding: 2rem;
+    border-radius: 10px;
+    text-align: center;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+}
+
+.modal-content h2 {
+    margin-bottom: 1.5rem;
+}
+
+.modal-content input {
+    padding: 0.8rem;
+    width: 80%;
+    margin-bottom: 1rem;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+}
+
+/* Style for the pass move modal */
+#pass-move-modal .modal-content {
+    max-width: 400px;
+}
+
+#pass-move-modal h2 {
+    font-size: 1.5rem;
+    color: var(--text-light);
+}
+
+#pass-move-modal button {
+    margin-top: 1rem;
 }

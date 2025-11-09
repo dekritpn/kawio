@@ -5,7 +5,7 @@ use kawio::storage::Storage;
 #[test]
 fn test_sessions_create_game() {
     let mut sessions = Sessions::new();
-    let id = sessions.create_game("Alice".to_string(), "Bob".to_string());
+    let id = sessions.create_game("Alice".to_string(), "Bob");
     assert!(sessions.has_game(&id));
     assert!(sessions.has_player(&id));
 }
@@ -13,7 +13,7 @@ fn test_sessions_create_game() {
 #[test]
 fn test_sessions_make_move() {
     let mut sessions = Sessions::new();
-    let id = sessions.create_game("Alice".to_string(), "Bob".to_string());
+    let id = sessions.create_game("Alice".to_string(), "Bob");
     let game = sessions.get_game(&id).unwrap();
     let moves = game.legal_moves();
     assert!(!moves.is_empty());

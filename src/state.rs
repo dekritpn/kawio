@@ -11,8 +11,13 @@ pub struct Sessions {
     queue: Vec<String>,
 }
 
-impl Sessions {
-    pub fn new() -> Self {
+impl Default for Sessions {
+    /// Creates a new `Sessions` instance.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the database cannot be opened or if games cannot be loaded.
+    fn default() -> Self {
         let db_path = env::var("DB_PATH").unwrap_or_else(|_| "kawio.db".to_string());
         let storage = Storage::new(&db_path).expect("Failed to open database");
         let (games, players) = storage.load_all_games().expect("Failed to load games");
@@ -25,6 +30,18 @@ impl Sessions {
             queue: Vec::new(),
         }
     }
+}
+
+impl Sessions {
+    /// Creates a new `Sessions` instance.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the database cannot be opened or if games cannot be loaded.
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
 
     pub fn join_matchmaking(&mut self, player: String) -> Option<String> {
         if self.queue.is_empty() {
@@ -32,23 +49,29 @@ impl Sessions {
             None
         } else {
             let opponent = self.queue.remove(0);
-            Some(self.create_game(player, opponent))
+            Some(self.create_game(player, &opponent))
         }
     }
 
-    pub fn create_game(&mut self, player1: String, player2: String) -> String {
+    /// Creates a new game and saves it to the database.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the game cannot be saved.
+    pub fn create_game(&mut self, player1: String, player2: &str) -> String {
         let id = format!("game_{}", self.next_id);
         self.next_id += 1;
         let game = Game::new();
         self.games.insert(id.clone(), game.clone());
         self.players
-            .insert(id.clone(), (player1.clone(), player2.clone()));
+            .insert(id.clone(), (player1.clone(), player2.to_string()));
         self.storage
-            .save_game(&id, &game, &player1, &player2)
+            .save_game(&id, &game, &player1, player2)
             .expect("Failed to save game");
         id
     }
 
+    #[must_use]
     pub fn get_game(&self, id: &str) -> Option<&Game> {
         self.games.get(id)
     }
@@ -57,10 +80,20 @@ impl Sessions {
         self.games.get_mut(id)
     }
 
+    #[must_use]
     pub fn get_players(&self, id: &str) -> Option<&(String, String)> {
         self.players.get(id)
     }
 
+    /// Makes a move in a game.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the game is not found, it's not the player's turn, or the move is invalid.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the game cannot be saved or if player stats cannot be updated.
     pub fn make_move(&mut self, id: &str, pos: u8, player: &str) -> Result<(), String> {
         let (p1, p2) = self.players.get(id).ok_or("Game not found".to_string())?;
         if let Some(game) = self.games.get_mut(id) {
@@ -93,6 +126,15 @@ impl Sessions {
         }
     }
 
+    /// Passes a turn in a game.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the game is not found.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the game cannot be saved or if player stats cannot be updated.
     pub fn pass(&mut self, id: &str) -> Result<(), String> {
         if let Some(game) = self.games.get_mut(id) {
             game.pass();
@@ -114,19 +156,23 @@ impl Sessions {
         }
     }
 
+    #[must_use]
     pub fn list_games(&self) -> Vec<String> {
         self.games.keys().cloned().collect()
     }
 
     // Test helpers
+    #[must_use]
     pub fn game_count(&self) -> usize {
         self.games.len()
     }
 
+    #[must_use]
     pub fn has_game(&self, id: &str) -> bool {
         self.games.contains_key(id)
     }
 
+    #[must_use]
     pub fn has_player(&self, id: &str) -> bool {
         self.players.contains_key(id)
     }

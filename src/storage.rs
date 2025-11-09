@@ -3,6 +3,11 @@ use rusqlite::{Connection, Result};
 use serde::Serialize;
 use std::collections::HashMap;
 
+type GameId = String;
+type PlayerName = String;
+type GamesMap = HashMap<GameId, Game>;
+type PlayersMap = HashMap<GameId, (PlayerName, PlayerName)>;
+
 #[derive(Serialize)]
 pub struct PlayerStats {
     pub name: String,
@@ -16,32 +21,42 @@ pub struct Storage {
 }
 
 impl Storage {
+    /// Creates a new `Storage` instance.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the database cannot be opened or if the tables cannot be created.
     pub fn new(db_path: &str) -> Result<Self> {
         let conn = Connection::open(db_path)?;
         conn.execute(
             "CREATE TABLE IF NOT EXISTS games (
-                  id TEXT PRIMARY KEY,
-                  black INTEGER NOT NULL,
-                  white INTEGER NOT NULL,
-                  current_player TEXT NOT NULL,
-                  passes INTEGER NOT NULL,
-                  player1 TEXT NOT NULL,
-                  player2 TEXT NOT NULL
-              )",
+                id TEXT PRIMARY KEY,
+                black REAL NOT NULL,
+                white REAL NOT NULL,
+                current_player TEXT NOT NULL,
+                passes INTEGER NOT NULL,
+                player1 TEXT NOT NULL,
+                player2 TEXT NOT NULL
+            )",
             [],
         )?;
         conn.execute(
             "CREATE TABLE IF NOT EXISTS players (
-                  name TEXT PRIMARY KEY,
-                  elo REAL NOT NULL DEFAULT 1200,
-                  wins INTEGER NOT NULL DEFAULT 0,
-                  losses INTEGER NOT NULL DEFAULT 0
-              )",
+                name TEXT PRIMARY KEY,
+                elo REAL NOT NULL DEFAULT 1200,
+                wins INTEGER NOT NULL DEFAULT 0,
+                losses INTEGER NOT NULL DEFAULT 0
+            )",
             [],
         )?;
         Ok(Storage { conn })
     }
 
+    /// Saves a game to the database.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the game cannot be saved.
     pub fn save_game(&self, id: &str, game: &Game, player1: &str, player2: &str) -> Result<()> {
         let current_player = match game.current_player {
             Player::Black => "Black",
@@ -49,19 +64,21 @@ impl Storage {
         };
         self.conn.execute(
             "INSERT OR REPLACE INTO games (id, black, white, current_player, passes, player1, player2) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
-            [id, &game.black.to_string(), &game.white.to_string(), current_player, &game.passes.to_string(), player1, player2],
+            rusqlite::params![id, game.black as f64, game.white as f64, current_player, i64::from(game.passes), player1, player2],
         )?;
         Ok(())
     }
 
+    /// Loads a game from the database.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the game cannot be loaded.
     pub fn load_game(&self, id: &str) -> Result<Option<(Game, String, String)>> {
         let mut stmt = self.conn.prepare("SELECT black, white, current_player, passes, player1, player2 FROM games WHERE id = ?1")?;
         let mut rows = stmt.query_map([id], |row| {
-            let black: i64 = row.get(0)?;
-            let white: i64 = row.get(1)?;
-            if black < 0 || white < 0 {
-                return Err(rusqlite::Error::QueryReturnedNoRows);
-            }
+            let black: f64 = row.get(0)?;
+            let white: f64 = row.get(1)?;
             let current_player: String = row.get(2)?;
             let passes: u8 = row.get(3)?;
             let player1: String = row.get(4)?;
@@ -90,19 +107,19 @@ impl Storage {
         }
     }
 
-    pub fn load_all_games(
-        &self,
-    ) -> Result<(HashMap<String, Game>, HashMap<String, (String, String)>)> {
+    /// Loads all games from the database.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the games cannot be loaded.
+    pub fn load_all_games(&self) -> Result<(GamesMap, PlayersMap)> {
         let mut stmt = self.conn.prepare(
             "SELECT id, black, white, current_player, passes, player1, player2 FROM games",
         )?;
         let rows = stmt.query_map([], |row| {
             let id: String = row.get(0)?;
-            let black: i64 = row.get(1)?;
-            let white: i64 = row.get(2)?;
-            if black < 0 || white < 0 {
-                return Err(rusqlite::Error::QueryReturnedNoRows);
-            }
+            let black: f64 = row.get(1)?;
+            let white: f64 = row.get(2)?;
             let current_player: String = row.get(3)?;
             let passes: u8 = row.get(4)?;
             let player1: String = row.get(5)?;
@@ -162,10 +179,7 @@ impl Storage {
         self.ensure_player(name)?;
         let column = if won { "wins" } else { "losses" };
         self.conn.execute(
-            &format!(
-                "UPDATE players SET {} = {} + 1 WHERE name = ?1",
-                column, column
-            ),
+            &format!("UPDATE players SET {column} = {column} + 1 WHERE name = ?1"),
             [name],
         )?;
         Ok(())
@@ -174,14 +188,17 @@ impl Storage {
     fn calculate_elo(rating_a: f64, rating_b: f64, a_won: bool) -> (f64, f64) {
         let k = 32.0;
         let expected_a = 1.0 / (1.0 + 10.0_f64.powf((rating_b - rating_a) / 400.0));
-        let expected_b = 1.0 - expected_a;
         let score_a = if a_won { 1.0 } else { 0.0 };
-        let score_b = 1.0 - score_a;
         let new_a = rating_a + k * (score_a - expected_a);
-        let new_b = rating_b + k * (score_b - expected_b);
+        let new_b = rating_b + k * ((1.0 - score_a) - (1.0 - expected_a));
         (new_a, new_b)
     }
 
+    /// Updates the player's ELO and wins/losses.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the player cannot be updated.
     pub fn update_player(&self, player: &str, opponent: &str, player_won: bool) -> Result<()> {
         self.ensure_player(player)?;
         self.ensure_player(opponent)?;
@@ -196,6 +213,11 @@ impl Storage {
         Ok(())
     }
 
+    /// Returns the leaderboard.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the leaderboard cannot be retrieved.
     pub fn get_leaderboard(&self) -> Result<Vec<PlayerStats>> {
         let mut stmt = self
             .conn

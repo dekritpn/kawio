@@ -3,17 +3,20 @@
 //! The board is represented as a 64-bit bitboard, with bit 0 = A8 (top-left), bit 63 = H1 (bottom-right).
 //! Coordinates use standard Othello notation: A1 = bottom-left (56), H8 = top-right (7).
 
+use std::cmp::Ordering;
 use std::fmt;
 
 /// Represents a player in the Othello game.
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]
 pub enum Player {
+    #[default]
     Black,
     White,
 }
 
 impl Player {
     /// Returns the opponent of the current player.
+    #[must_use]
     pub fn opponent(&self) -> Player {
         match self {
             Player::Black => Player::White,
@@ -23,7 +26,7 @@ impl Player {
 }
 
 /// Represents the state of an Othello game.
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct Game {
     pub black: u64,  // Bitboard for black discs
     pub white: u64,  // Bitboard for white discs
@@ -31,10 +34,9 @@ pub struct Game {
     pub passes: u8,  // Number of consecutive passes
 }
 
-const ALL: u64 = 0xFFFF_FFFF_FFFF_FFFF;
-
 impl Game {
     /// Creates a new Othello game with the standard initial position.
+    #[must_use]
     pub fn new() -> Self {
         // Initial position: Black at E4 (36) and D5 (27), White at D4 (35) and E5 (28)
         let black = (1u64 << 36) | (1u64 << 27); // E4, D5
@@ -48,17 +50,19 @@ impl Game {
     }
 
     /// Returns a bitboard of all occupied squares.
-    /// Returns the bitboard of all occupied squares.
+    #[must_use]
     pub fn occupied(&self) -> u64 {
         self.black | self.white
     }
 
     /// Returns the bitboard of all empty squares.
+    #[must_use]
     pub fn empty(&self) -> u64 {
-        !self.occupied() & ALL
+        !self.occupied()
     }
 
     /// Checks if a move at the given position is valid for the current player.
+    #[must_use]
     pub fn is_valid_move(&self, pos: u8) -> bool {
         if pos >= 64 || (self.occupied() & (1u64 << pos)) != 0 {
             return false;
@@ -71,17 +75,13 @@ impl Game {
     /// This function checks all eight directions from the position to find opponent discs
     /// that are sandwiched between the new disc and an existing disc of the current player.
     /// Returns a bitboard where each bit represents a disc to be flipped.
+    #[must_use]
     pub fn flips(&self, pos: u8) -> u64 {
         let mut flips = 0u64;
-        let player_bb = if self.current_player == Player::Black {
-            self.black
+        let (player_bb, opponent_bb) = if self.current_player == Player::Black {
+            (self.black, self.white)
         } else {
-            self.white
-        };
-        let opponent_bb = if self.current_player == Player::Black {
-            self.white
-        } else {
-            self.black
+            (self.white, self.black)
         };
 
         // Directions: (dr, dc) for row and column deltas
@@ -97,11 +97,11 @@ impl Game {
         ];
 
         for &(dr, dc) in &directions {
-            let mut r = (pos / 8) as i8 + dr;
-            let mut c = (pos % 8) as i8 + dc;
+            let mut r = (pos / 8) as i16 + dr;
+            let mut c = (pos % 8) as i16 + dc;
             let mut temp_flips = 0u64;
 
-            while r >= 0 && r < 8 && c >= 0 && c < 8 {
+            while (0..8).contains(&r) && (0..8).contains(&c) {
                 let bit = 1u64 << (r as u64 * 8 + c as u64);
                 if (opponent_bb & bit) != 0 {
                     temp_flips |= bit;
@@ -119,7 +119,11 @@ impl Game {
     }
 
     /// Previews the flip mask for a potential move without mutating the game state.
-    /// Returns the bitboard of discs that would be flipped, or an error if the move is invalid.
+    /// Returns the bitboard of discs that would be flipped.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the move is invalid.
     pub fn preview_move(&self, pos: u8) -> Result<u64, String> {
         if pos >= 64 {
             return Err("Position out of bounds".to_string());
@@ -135,6 +139,9 @@ impl Game {
     }
 
     /// Places a disc at the given position and flips the appropriate opponent discs.
+    ///
+    /// # Errors
+    ///
     /// Returns an error if the move is invalid.
     pub fn make_move(&mut self, pos: u8) -> Result<(), String> {
         if pos >= 64 {
@@ -169,50 +176,55 @@ impl Game {
     }
 
     /// Passes the turn to the opponent and increments the pass counter.
-    /// Passes the turn to the opponent and increments the pass counter.
     pub fn pass(&mut self) {
         self.current_player = self.current_player.opponent();
         self.passes += 1;
     }
 
     /// Returns a list of all legal move positions for the current player.
+    #[must_use]
     pub fn legal_moves(&self) -> Vec<u8> {
-        let mut moves = Vec::new();
-        for pos in 0..64 {
-            if self.is_valid_move(pos) {
-                moves.push(pos);
-            }
-        }
-        moves
+        (0..64).filter(|&pos| self.is_valid_move(pos)).collect()
     }
 
-    /// Checks if the game is over (two consecutive passes have occurred).
+    /// Checks if the game is over (two consecutive passes have occurred, a player has no pieces, or the board is full).
+    #[must_use]
     pub fn is_game_over(&self) -> bool {
         self.passes == 2
+            || self.black.count_ones() == 0
+            || self.white.count_ones() == 0
+            || self.occupied().count_ones() == 64
     }
 
     /// Returns the winner of the game, or None if it's a tie or not over.
+    #[must_use]
     pub fn winner(&self) -> Option<Player> {
         if !self.is_game_over() {
             return None;
         }
         let black_count = self.black.count_ones();
         let white_count = self.white.count_ones();
-        if black_count > white_count {
-            Some(Player::Black)
-        } else if white_count > black_count {
-            Some(Player::White)
-        } else {
-            None  // Tie
+        match black_count.cmp(&white_count) {
+            Ordering::Greater => Some(Player::Black),
+            Ordering::Less => Some(Player::White),
+            Ordering::Equal => None,
         }
     }
 
     /// Returns the count of black and white discs as (black, white).
+    #[must_use]
     pub fn disc_count(&self) -> (u32, u32) {
         (self.black.count_ones(), self.white.count_ones())
     }
 
+    /// Returns the scores for black and white players.
+    #[must_use]
+    pub fn scores(&self) -> (u32, u32) {
+        self.disc_count()
+    }
+
     /// Checks if the given player has any legal moves.
+    #[must_use]
     pub fn has_legal_move(&self, player: Player) -> bool {
         let temp_game = Game {
             black: self.black,
@@ -225,17 +237,22 @@ impl Game {
 
     /// Converts a position (0-63) to a coordinate string, e.g., 56 -> "A1" (bottom-left).
     /// Uses standard Othello notation where A1 is bottom-left, H8 is top-right.
+    #[must_use]
     pub fn pos_to_coord(pos: u8) -> String {
         let row_index = pos / 8;
         let col_index = pos % 8;
         let row = 8 - row_index;
         let col = (col_index + b'A') as char;
-        format!("{}{}", col, row)
+        format!("{col}{row}")
     }
 
     /// Converts a coordinate string to a position (0-63), e.g., "A1" -> 56.
     /// Uses standard Othello notation where A1 is bottom-left, H8 is top-right.
     /// Accepts lowercase and validates input.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the coordinate is invalid.
     pub fn coord_to_pos(coord: &str) -> Result<u8, String> {
         if coord.len() != 2 {
             return Err("Coordinate must be exactly 2 characters".to_string());
@@ -244,14 +261,14 @@ impl Game {
         let bytes = upper.as_bytes();
         let col = bytes[0];
         let row = bytes[1];
-        if col < b'A' || col > b'H' {
+        if !(b'A'..=b'H').contains(&col) {
             return Err("Column must be A-H".to_string());
         }
-        if row < b'1' || row > b'8' {
+        if !(b'1'..=b'8').contains(&row) {
             return Err("Row must be 1-8".to_string());
         }
         let col_index = col - b'A';
-        let row_num = (row - b'0') as u8; // '1' -> 1
+        let row_num = row - b'0';
         let row_index = 8 - row_num;
         Ok(row_index * 8 + col_index)
     }
@@ -262,7 +279,7 @@ impl fmt::Display for Game {
         writeln!(f, "  A B C D E F G H")?;
         for row in 0..8 {
             let row_num = 8 - row;
-            write!(f, "{} ", row_num)?;
+            write!(f, "{row_num} ")?;
             for col in 0..8 {
                 let pos = row * 8 + col;
                 let bit = 1u64 << pos;
@@ -362,5 +379,20 @@ mod tests {
         assert!(game.preview_move(64).is_err()); // out of bounds
         assert!(game.preview_move(27).is_err()); // occupied
         assert!(game.preview_move(0).is_err()); // no flips
+    }
+
+    #[test]
+    fn test_full_board() {
+        let mut game = Game::new();
+        game.black = 0;
+        game.white = 0;
+        for i in 0..64 {
+            if i % 2 == 0 {
+                game.black |= 1 << i;
+            } else {
+                game.white |= 1 << i;
+            }
+        }
+        assert!(game.is_game_over());
     }
 }

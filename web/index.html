@@ -3,35 +3,55 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kawio Othello</title>
+    <title>Professional Othello</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <div id="app">
-        <h1>Kawio Othello</h1>
-        <div id="login" class="section">
+    <div id="game-container">
+        <header>
+            <h1>Othello</h1>
+        </header>
+        <div id="game-board"></div>
+         <div id="game-info">
+             <div class="player-info" id="player-black">
+                 <span class="player-name">Black</span>
+                 <span class="score" id="score-black">2</span>
+             </div>
+             <div class="player-info" id="player-white">
+                 <span class="player-name">White</span>
+                 <span class="score" id="score-white">2</span>
+             </div>
+         </div>
+         <div id="game-status"></div>
+         <div id="game-controls">
+             <button id="new-game-btn">New Game</button>
+             <button id="login-btn">Login</button>
+             <button id="logout-btn" style="display: none;">Logout</button>
+         </div>
+    </div>
+
+    <div id="login-modal" class="modal hidden">
+        <div class="modal-content">
             <h2>Login</h2>
-            <input type="text" id="playerName" placeholder="Enter player name">
-            <button id="loginBtn">Login</button>
-        </div>
-        <div id="menu" class="section hidden">
-            <h2>Menu</h2>
-            <button id="createMatchBtn">Create Match vs AI</button>
-            <button id="joinMatchmakingBtn">Join Matchmaking</button>
-            <button id="leaderboardBtn">View Leaderboard</button>
-        </div>
-        <div id="game" class="section hidden">
-            <h2>Game</h2>
-            <div id="board"></div>
-            <div id="status"></div>
-            <div id="legalMoves"></div>
-        </div>
-        <div id="leaderboard" class="section hidden">
-            <h2>Leaderboard</h2>
-            <div id="leaderboardContent"></div>
-            <button id="backToMenuBtn">Back to Menu</button>
+            <input type="text" id="player-name" placeholder="Enter your name">
+            <button id="submit-login-btn">Login</button>
         </div>
     </div>
+
+    <div id="game-over-modal" class="modal hidden">
+        <div class="modal-content">
+            <h2 id="game-over-message"></h2>
+            <button id="play-again-btn">Play Again</button>
+        </div>
+    </div>
+
+    <div id="pass-move-modal" class="modal hidden">
+        <div class="modal-content">
+            <h2>No legal moves. You must pass.</h2>
+            <button id="pass-move-btn">OK</button>
+        </div>
+    </div>
+
     <script src="app.js"></script>
 </body>
 </html>
